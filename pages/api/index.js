@@ -1,20 +1,33 @@
-const axios = require('axios');
+const axios = require('axios')
 
 export default function handler(req, res, next) {
-  async function getURI(url) {
-    try {
-      const response = await axios.get(url);
-      if (response.status !== 200) {
-        return res.status(response.status).json({ type: 'error', message: response.statusText });
-      } else {
-      res.json(JSON.stringify(response.data))
-      }
-    } catch (error) {
-      console.log(error.message, "ERR")
-      // return res.status(500).json({ type: 'error', message: error.message });
+    async function getURI(url, method, headers, body) {
+        try {
+            const response = await axios({
+                method,
+                url,
+                data: body,
+                headers,
+                validateStatus: () => true,
+            })
+            return res.status(response.status).json(response.data)
+        } catch (error) {
+            return res
+                .status(500)
+                .json({ type: 'internal-error', message: error.message })
+        }
     }
-  } 
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Content-Type', 'application/json');
-  getURI(JSON.parse(req.body)['my-url'])
+
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Content-Type', 'application/json')
+
+    const headers = req.headers.authorization
+        ? { authorization: req.headers.authorization }
+        : {}
+    getURI(
+        req.headers['x-original-url'],
+        req.headers['x-original-method'],
+        headers,
+        req.body
+    )
 }
